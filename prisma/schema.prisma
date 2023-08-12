@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PGURL")
+}
+
+// model users {
+//   id        Int      @id @default(autoincrement())
+//   name      String
+//   username  String   @unique
+//   email     String   @unique
+//   password  String
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+// model transactions {
+//   id        Int      @id @default(autoincrement())
+//   userId    Int
+//   amount    Int
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+// model account {
+//   id        Int      @id @default(autoincrement())
+//   userId    Int
+//   balance   Int
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+model users {
+  id           Int            @id @default(autoincrement())
+  name         String
+  username     String         @unique
+  email        String         @unique
+  password     String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  transactions transactions[]
+  account      account?
+
+  @@unique([id, name])
+}
+
+model transactions {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      users    @relation(fields: [userId], references: [id])
+}
+
+model account {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique
+  accountHolder String
+  balance       Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          users    @relation(fields: [userId, accountHolder], references: [id, name])
+
+  @@unique([userId, accountHolder])
+}
