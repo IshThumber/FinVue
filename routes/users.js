@@ -1,45 +1,67 @@
 const router = require("express").Router();
 const lib = require("../lib");
-const validInfo = require("../middleware/validInfo");
+const auth = require("../middleware/auth");
 
-router.post("/register", validInfo.register, async (req, res) => {
-    console.log("Create user called.");
+router.get("/getusers", async (req, res) => {
+    console.log("getusers");
     try {
-        const { name, username, email, password } = req.body;
+        const users = await lib.getUsers();
+        console.log(users);
 
-        const isEmail = await lib.getUsersByEmail(email);
-        const isUsername = await lib.getUsersByUsername(username);
-
-        if (!isEmail) {
-            await lib.createUser(req.body);
-        } else {
-            console.log("Email already exists.");
-            res.status(400).send("Email already exists.");
-        }
-
-        if (!isUsername) {
-            await lib.createUser(req.body);
-        } else {
-            console.log("Username already exists.");
-            res.status(400).send("Username already exists.");
-        }
-
-        console.log("User created.");
+        return res.type("json").send(users);
     } catch (err) {
         console.log(err);
     }
 });
 
-// router.get("/getusers", async (req, res) => {
-//     console.log("Get users called.");
-//     await lib.getUsers();
-// });
+router.post("/users/:id", async (req, res) => {
+    console.log(`User ${req.params.id}`);
 
-// router.post("/login", async (req, res) => {
-//     console.log("login");
-//     const { username, password } = req.body;
-//     await lib.loginUser(req.body);
-// });
+    try {
+        const id = parseInt(req.params.id);
 
+        const user = await lib.getUserbyId(id);
+
+        console.log(user);
+        return res.type("json").send(user);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+router.post("/useru", async (req, res) => {
+    console.log("user by username");
+
+    try {
+        const username = req.body.username;
+        const byUsername = await lib.getUsersByUsername(username);
+
+        if (!byUsername) {
+            return res.type("json").send({ error: "Username not found" });
+        }
+
+        console.log(byUsername);
+        return res.type("json").send(byUsername);
+    } catch (err) {
+        console.log(err);
+    }
+});
+
+router.post("/usere", async (req, res) => {
+    console.log("user by email");
+
+    try {
+        const email = req.body.email;
+        const byEmail = await lib.getUsersByEmail(email);
+
+        if (!byEmail) {
+            return res.type("json").send({ error: "Email not found" });
+        }
+        console.log(byEmail);
+        return res.type("json").send(byEmail);
+    } catch (err) {
+        console.log(err);
+    }
+});
 
 module.exports = router;

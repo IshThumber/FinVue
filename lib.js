@@ -135,6 +135,20 @@ async function getUsers() {
     }
 }
 
+async function getUserbyId(userId) {
+    try {
+        const user = await prisma.users.findUnique({
+            where: {
+                id: userId
+            }
+        });
+
+        return user;
+    } catch (err) {
+        console.log(err);
+    }
+}
+
 async function getUsersByEmail(email) {
     try {
         const user = await prisma.users.findUnique({
@@ -329,6 +343,16 @@ async function getAccount(accountId) {
     }
 }
 
+async function getAllAccounts() {
+    try {
+        const accounts = await prisma.account.findMany();
+        console.log(accounts);
+        return accounts;
+    } catch (err) {
+        console.log(err);
+    }
+}
+
 async function deleteUser(userId) {
     try {
         const user = await prisma.users.findUnique({
@@ -382,5 +406,7 @@ module.exports = {
     toGetStringId,
     getUsersByUsername,
     intIdtoStringId,
-    getIdbyUsername
+    getIdbyUsername,
+    getAllAccounts,
+    getUserbyId
 };
