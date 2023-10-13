@@ -6,7 +6,7 @@ function generateJWT(username) {
 
     const payload = { username: username };
 
-    const token = jwt.sign(payload, secretKey, { expiresIn: "1h" });
+    const token = jwt.sign(payload, secretKey, { expiresIn: process.env.JWT_EXPIRES_IN });
 
     return token;
 }

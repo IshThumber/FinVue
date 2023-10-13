@@ -1,8 +1,9 @@
 const prisma = require("./prisma/prismaClient");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
+const jwt = require("jsonwebtoken");
 
-const hashPass = async password => {
+const hashPass = async (password) => {
     try {
         return await bcrypt.hash(password, saltRounds);
     } catch (err) {
@@ -18,71 +19,14 @@ const comparePass = async (password, hashPass) => {
     }
 };
 
-const intIdtoStringId = id => {
-    const characters =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const length = 10;
-    let uniqueString = "";
-
-    while (id > 0 || uniqueString.length < length) {
-        const remainder = id % characters.length;
-        uniqueString = characters[remainder] + uniqueString;
-        id = Math.floor(id / characters.length);
-    }
-
-    // If the generated string is shorter than the desired length, pad it with random characters
-    while (uniqueString.length < length) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        uniqueString += characters[randomIndex];
-    }
-
-    return uniqueString;
-};
-
-async function toGetStringId(username) {
-    try {
-        const id = await prisma.users.findUnique({
-            where: {
-                username: username
-            },
-            select: {
-                id: true
-            }
-        });
-
-        const stringId = intIdtoStringId(id.id);
-        console.log(stringId);
-        return stringId;
-    } catch (err) {
-        console.error(err);
-    }
+//  lib.user.generateToken(user.id);
+async function generateToken(id) {
+    // jwt token
+    const token = jwt.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN
+    });
+    console.log(token);
 }
-
-// function generateUniqueString(id) {
-//     const characters =
-//         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-//     const length = 10;
-//     let uniqueString = "";
-
-//     while (id > 0 || uniqueString.length < length) {
-//         const remainder = id % characters.length;
-//         uniqueString = characters[remainder] + uniqueString;
-//         id = Math.floor(id / characters.length);
-//     }
-
-//     // If the generated string is shorter than the desired length, pad it with random characters
-//     while (uniqueString.length < length) {
-//         const randomIndex = Math.floor(Math.random() * characters.length);
-//         uniqueString += characters[randomIndex];
-//     }
-
-//     return uniqueString;
-// }
-
-// // Example usage
-// const databaseId = 123456;
-// const uniqueId = generateUniqueString(databaseId);
-// console.log(uniqueId);
 
 async function registerUser(name, username, email, password) {
     const pass = await hashPass(password);
@@ -278,11 +222,18 @@ async function transfer(fromAccountId, toAccountId, amount) {
                 id: toAccountId
             }
         });
+
+        if (fromAccount.balance < amount) {
+            throw new Error("Insufficient funds.");
+        }
+
         const newFromBalance = fromAccount.balance - amount;
+        const newToBalance = toAccount.balance + amount;
+
         if (newFromBalance < 0) {
             throw new Error("Insufficient funds.");
         }
-        const newToBalance = toAccount.balance + amount;
+
         const updatedFromAccount = await prisma.account.update({
             where: {
                 id: fromAccountId
@@ -291,6 +242,7 @@ async function transfer(fromAccountId, toAccountId, amount) {
                 balance: newFromBalance
             }
         });
+
         const updatedToAccount = await prisma.account.update({
             where: {
                 id: toAccountId
@@ -299,14 +251,17 @@ async function transfer(fromAccountId, toAccountId, amount) {
                 balance: newToBalance
             }
         });
+
         console.log(updatedFromAccount);
         console.log(updatedToAccount);
+
         return {
             updatedFromAccount,
             updatedToAccount
         };
     } catch (err) {
-        console.log(err);
+        console.error(err);
+        throw err;
     }
 }
 
@@ -355,18 +310,13 @@ async function getAllAccounts() {
 
 async function deleteUser(userId) {
     try {
-        const user = await prisma.users.findUnique({
+        const user = await prisma.users.delete({
             where: {
                 id: userId
             }
         });
-        const deletedUser = await prisma.users.delete({
-            where: {
-                id: userId
-            }
-        });
-        console.log(deletedUser);
-        return deletedUser;
+        console.log(user);
+        return user;
     } catch (err) {
         console.log(err);
     }
@@ -389,6 +339,68 @@ async function userNameToAccountId(name) {
     }
 }
 
+async function getTrasaction(userId, username) {
+    // get the transaction detail for the user which includes the amount and the timestamp
+    try {
+        const transaction = await prisma.transaction.findUnique({
+            where: {
+                OR: [
+                    {
+                        fromId: userId
+                    },
+                    {
+                        toId: userId
+                    }
+                ],
+                OR: [
+                    {
+                        fromName: username
+                    },
+                    {
+                        toName: username
+                    }
+                ]
+            },
+            select: {
+                amount: true,
+                timestamp: true,
+                fromId: true,
+                toId: true
+            }
+        });
+        console.log(transaction);
+        return transaction;
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+async function createTable(name, amount) {
+    try {
+        const table = await prisma.transactions.create({
+            data: {
+                // id: id,
+                name: name,
+                amount: amount,
+                timestamp: new Date().toISOString()
+            }
+        });
+        console.log(table);
+        return table;
+    } catch (err) {
+        console.log(err);
+    }
+}
+async function getTable() {
+    try {
+        const table = await prisma.transactions.findMany();
+        console.log(table);
+        return table;
+    } catch (err) {
+        console.log(err);
+    }
+}
+
 module.exports = {
     comparePass,
     registerUser,
@@ -399,14 +411,17 @@ module.exports = {
     withdraw,
     transfer,
     closeAccount,
+    getTrasaction,
     getAccount,
     deleteUser,
     userNameToAccountId,
     getUsersByEmail,
-    toGetStringId,
     getUsersByUsername,
-    intIdtoStringId,
+    generateToken,
+    // intIdtoStringId,
     getIdbyUsername,
     getAllAccounts,
-    getUserbyId
+    getUserbyId,
+    createTable,
+    getTable
 };

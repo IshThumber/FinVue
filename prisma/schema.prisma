@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// // This is your Prisma schema file,
+// // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -9,32 +9,6 @@ datasource db {
   provider = "postgresql"
   url      = env("PGURL")
 }
-
-// model users {
-//   id        Int      @id @default(autoincrement())
-//   name      String
-//   username  String   @unique
-//   email     String   @unique
-//   password  String
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-// }
-
-// model transactions {
-//   id        Int      @id @default(autoincrement())
-//   userId    Int
-//   amount    Int
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-// }
-
-// model account {
-//   id        Int      @id @default(autoincrement())
-//   userId    Int
-//   balance   Int
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-// }
 
 model users {
   id           Int            @id @default(autoincrement())
@@ -47,26 +21,33 @@ model users {
   transactions transactions[]
   account      account?
 
+  // Define a unique constraint on id
   @@unique([id, name])
 }
 
 model transactions {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  amount    Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      users    @relation(fields: [userId], references: [id])
+  trans_id        Int      @id @default(autoincrement())
+  name            String
+  amount          Float
+  userId          Int
+  accountId       Int?
+  transactionDate DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            users    @relation(fields: [userId], references: [id])
+  account         account? @relation(fields: [accountId], references: [id])
 }
 
 model account {
-  id            Int      @id @default(autoincrement())
-  userId        Int      @unique
+  id            Int            @id @default(autoincrement())
+  userId        Int            @unique
   accountHolder String
-  balance       Int
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          users    @relation(fields: [userId, accountHolder], references: [id, name])
+  balance       Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          users          @relation(fields: [userId, accountHolder], references: [id, name])
+  transactions  transactions[]
 
+  // Define a unique constraint on userId and accountHolder
   @@unique([userId, accountHolder])
 }
